@@ -89,6 +89,12 @@ export function LiveMatch({ matchId }: { matchId: string }) {
       timestamp: timer.elapsed, type,
     });
     toast.success(`${type} recorded`, { duration: 1200 });
+    setSelectedMpId(null); // auto-close after recording
+  };
+
+  const changePosition = async (newPos: string) => {
+    if (!selectedMp) return;
+    await db.matchPlayers.update(selectedMp.id, { position: newPos });
   };
 
   const performSub = async (benchMpId: string) => {
@@ -251,6 +257,20 @@ export function LiveMatch({ matchId }: { matchId: string }) {
                   )}
                 </div>
               </SheetHeader>
+
+              {/* Position editor — match-only, persisted to DB */}
+              <div className="flex items-center gap-3 mb-4 px-1">
+                <span className="text-xs text-muted-foreground shrink-0">Position (this match)</span>
+                <select
+                  value={selectedMp?.position ?? ""}
+                  onChange={(e) => changePosition(e.target.value)}
+                  className="flex-1 text-sm font-semibold bg-white/8 border border-border/50 rounded-lg px-3 py-1.5 text-foreground outline-none focus:border-primary/50 transition-colors"
+                >
+                  {["GK","RB","CB","LB","RWB","LWB","CDM","CM","CAM","RM","LM","RW","LW","SS","ST","CF"].map((p) => (
+                    <option key={p} value={p} style={{ background: "#0f1726" }}>{p}</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="space-y-4 mb-5">
                 <div>

@@ -3,44 +3,49 @@ import { cn } from "@/lib/utils";
 import { getPositionGroup, GROUP_STYLES } from "@/lib/positions";
 import type { MatchPlayer, Player, PlayerStats } from "@/types";
 
-// Formation slot coordinates [x%, y%] on pitch (0,0 = top-left, 100,100 = bottom-right)
-// GK at bottom (y≈88), FWD at top (y≈18)
-const FORMATION_COORDS: Record<string, Array<[number, number]>> = {
-  "4-4-2": [
-    [50, 88], // GK
-    [80, 72], [62, 70], [38, 70], [20, 72], // RB CB CB LB
-    [82, 50], [60, 50], [40, 50], [18, 50], // RM CM CM LM
-    [62, 22], [38, 22], // ST ST
-  ],
-  "4-3-3": [
-    [50, 88], // GK
-    [80, 72], [62, 70], [38, 70], [20, 72], // RB CB CB LB
-    [72, 50], [50, 48], [28, 50], // CM CM CM
-    [80, 22], [50, 18], [20, 22], // RW ST LW
-  ],
-  "4-2-3-1": [
-    [50, 88], // GK
-    [80, 72], [62, 70], [38, 70], [20, 72], // RB CB CB LB
-    [63, 60], [37, 60], // CDM CDM
-    [75, 40], [50, 38], [25, 40], // CAM CAM CAM
-    [50, 18], // ST
-  ],
-  "3-5-2": [
-    [50, 88], // GK
-    [65, 72], [50, 70], [35, 72], // CB CB CB
-    [85, 50], [65, 50], [50, 48], [35, 50], [15, 50], // RM CM CM CM LM
-    [62, 22], [38, 22], // ST ST
-  ],
-  "5-3-2": [
-    [50, 88], // GK
-    [85, 63], [67, 72], [50, 74], [33, 72], [15, 63], // RWB CB CB CB LWB
-    [68, 48], [50, 46], [32, 48], // CM CM CM
-    [62, 22], [38, 22], // ST ST
-  ],
+// ── Position → half-pitch coordinate ────────────────────────────────────────
+// y=0 top (attacking end), y=100 bottom (our goal)
+// fixedX means no horizontal distribution needed (flank positions)
+const POS_BASE: Record<string, { y: number; fixedX?: number }> = {
+  GK:  { y: 88 },
+  RB:  { y: 72, fixedX: 84 }, LB: { y: 72, fixedX: 16 },
+  CB:  { y: 70 },
+  RWB: { y: 62, fixedX: 89 }, LWB: { y: 62, fixedX: 11 },
+  CDM: { y: 58 }, DM: { y: 58 },
+  CM:  { y: 46 },
+  RM:  { y: 46, fixedX: 89 }, LM: { y: 46, fixedX: 11 },
+  CAM: { y: 34 }, AM: { y: 34 },
+  RW:  { y: 20, fixedX: 84 }, LW: { y: 20, fixedX: 16 },
+  SS:  { y: 22 },
+  ST:  { y: 13 }, CF: { y: 13 },
 };
 
-const DEFAULT_COORDS: Array<[number, number]> = FORMATION_COORDS["4-4-2"];
+function distributeX(n: number, i: number): number {
+  if (n === 1) return 50;
+  const margin = n <= 3 ? 22 : 16;
+  return margin + ((100 - 2 * margin) * i / (n - 1));
+}
 
+function computeCoords(players: PitchPlayer[]): Map<string, [number, number]> {
+  // Group players by their assigned match position
+  const byPos: Record<string, string[]> = {};
+  for (const pp of players) {
+    const pos = pp.matchPlayer.position;
+    if (!byPos[pos]) byPos[pos] = [];
+    byPos[pos].push(pp.matchPlayer.id);
+  }
+  const map = new Map<string, [number, number]>();
+  for (const [pos, ids] of Object.entries(byPos)) {
+    const base = POS_BASE[pos] ?? { y: 46 };
+    ids.forEach((id, i) => {
+      const x = base.fixedX !== undefined ? base.fixedX : distributeX(ids.length, i);
+      map.set(id, [x, base.y]);
+    });
+  }
+  return map;
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
 export interface PitchPlayer {
   matchPlayer: MatchPlayer;
   player: Player;
@@ -48,7 +53,7 @@ export interface PitchPlayer {
 }
 
 interface FootballPitchProps {
-  formation: string;
+  formation?: string;
   starters: PitchPlayer[];
   bench?: PitchPlayer[];
   onPlayerClick?: (mpId: string) => void;
@@ -56,6 +61,11 @@ interface FootballPitchProps {
   showRatings?: boolean;
   className?: string;
 }
+
+// Ring colour per position group
+const RING_COLOR: Record<string, string> = {
+  GK: "#f59e0b", DEF: "#3b82f6", MID: "#10b981", FWD: "#f43f5e",
+};
 
 function ratingColor(r: number) {
   if (r >= 8) return "#4ade80";
@@ -65,8 +75,8 @@ function ratingColor(r: number) {
   return "#f87171";
 }
 
+// ── Component ────────────────────────────────────────────────────────────────
 export function FootballPitch({
-  formation,
   starters,
   bench = [],
   onPlayerClick,
@@ -74,60 +84,46 @@ export function FootballPitch({
   showRatings = false,
   className,
 }: FootballPitchProps) {
-  const coords = FORMATION_COORDS[formation] ?? DEFAULT_COORDS;
+  const coords = computeCoords(starters);
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {/* Pitch */}
-      <div className="relative w-full" style={{ paddingBottom: "140%" }}>
+      {/* Half-pitch */}
+      <div className="relative w-full" style={{ paddingBottom: "70%" }}>
         <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{ background: "#166534" }}>
-          {/* Pitch stripes */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {Array.from({ length: 7 }).map((_, i) => (
+
+          {/* Stripe texture */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 70" preserveAspectRatio="none">
+            {Array.from({ length: 5 }).map((_, i) => (
               <rect key={i} x={0} y={i * 14} width={100} height={7} fill="rgba(0,0,0,0.06)" />
             ))}
           </svg>
 
-          {/* Pitch markings */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 140" preserveAspectRatio="none">
+          {/* Pitch markings — half pitch, our goal at bottom */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 70" preserveAspectRatio="none">
             {/* Outer boundary */}
-            <rect x="3" y="3" width="94" height="134" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.8" />
-            {/* Halfway line */}
-            <line x1="3" y1="70" x2="97" y2="70" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            {/* Center circle */}
-            <circle cx="50" cy="70" r="12" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            <circle cx="50" cy="70" r="0.8" fill="rgba(255,255,255,0.5)" />
-            {/* Top penalty area */}
-            <rect x="25" y="3" width="50" height="18" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            {/* Top goal area */}
-            <rect x="38" y="3" width="24" height="7" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            {/* Top goal */}
-            <rect x="43" y="0" width="14" height="3" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.5" />
-            {/* Top penalty spot */}
-            <circle cx="50" cy="15" r="0.8" fill="rgba(255,255,255,0.5)" />
-            {/* Bottom penalty area */}
-            <rect x="25" y="119" width="50" height="18" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            {/* Bottom goal area */}
-            <rect x="38" y="130" width="24" height="7" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            {/* Bottom goal */}
-            <rect x="43" y="137" width="14" height="3" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.5" />
-            {/* Bottom penalty spot */}
-            <circle cx="50" cy="125" r="0.8" fill="rgba(255,255,255,0.5)" />
+            <rect x="2" y="2" width="96" height="66" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.7" />
+            {/* Halfway line (top) dashed */}
+            <line x1="2" y1="2" x2="98" y2="2" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5" strokeDasharray="3,2" />
+            {/* Penalty area */}
+            <rect x="24" y="40" width="52" height="28" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.6" />
+            {/* Goal area */}
+            <rect x="37" y="56" width="26" height="12" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.6" />
+            {/* Goal */}
+            <rect x="43" y="67.5" width="14" height="3" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.5" />
+            {/* Penalty spot */}
+            <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,0.55)" />
+            {/* Penalty arc — partial circle above penalty area */}
+            <path d="M 34 40 A 16 16 0 0 1 66 40" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
           </svg>
 
-          {/* Players */}
-          {starters.map((pp, i) => {
-            const [px, py] = coords[i] ?? [50, 50];
+          {/* Player tokens */}
+          {starters.map((pp) => {
+            const [px, py] = coords.get(pp.matchPlayer.id) ?? [50, 50];
             const group = getPositionGroup(pp.matchPlayer.position);
-            const styles = GROUP_STYLES[group];
+            const ringColor = RING_COLOR[group] ?? "#22c55e";
             const isSelected = selectedMpId === pp.matchPlayer.id;
             const rating = pp.stats?.rating;
-
-            // Map group to color for the ring
-            const ringColors: Record<string, string> = {
-              GK: "#f59e0b", DEF: "#3b82f6", MID: "#10b981", FWD: "#f43f5e",
-            };
-            const ringColor = ringColors[group] ?? "#22c55e";
 
             return (
               <button
@@ -135,7 +131,7 @@ export function FootballPitch({
                 onClick={() => onPlayerClick?.(pp.matchPlayer.id)}
                 disabled={!onPlayerClick}
                 className={cn(
-                  "absolute flex flex-col items-center gap-0.5 transition-all",
+                  "absolute flex flex-col items-center transition-all",
                   onPlayerClick ? "cursor-pointer hover:scale-110 active:scale-95" : "cursor-default",
                   isSelected ? "scale-110 z-20" : "z-10"
                 )}
@@ -143,56 +139,49 @@ export function FootballPitch({
                   left: `${px}%`,
                   top: `${py}%`,
                   transform: "translate(-50%, -50%)",
-                  width: "14%",
+                  width: "13%",
+                  gap: "2px",
                 }}
               >
-                {/* Player circle */}
                 <div
-                  className="rounded-full flex items-center justify-center text-white font-bold transition-all"
+                  className="rounded-full flex items-center justify-center text-white font-bold"
                   style={{
-                    width: "2.2rem",
-                    height: "2.2rem",
-                    background: isSelected
-                      ? "#22c55e"
-                      : "rgba(15,23,42,0.85)",
+                    width: "2rem",
+                    height: "2rem",
+                    background: isSelected ? "#22c55e" : "rgba(10,18,38,0.88)",
                     boxShadow: isSelected
-                      ? `0 0 0 3px #22c55e, 0 4px 12px rgba(34,197,94,0.5)`
-                      : `0 0 0 2.5px ${ringColor}, 0 2px 8px rgba(0,0,0,0.4)`,
+                      ? `0 0 0 2.5px #22c55e, 0 3px 10px rgba(34,197,94,0.55)`
+                      : `0 0 0 2px ${ringColor}, 0 2px 6px rgba(0,0,0,0.5)`,
                     backdropFilter: "blur(4px)",
-                    fontSize: "0.72rem",
+                    fontSize: "0.68rem",
                   }}
                 >
                   {pp.player.jerseyNumber}
                 </div>
-
-                {/* Name label */}
                 <div
-                  className="text-center leading-none font-semibold truncate w-full px-0.5"
+                  className="font-semibold truncate w-full text-center px-0.5"
                   style={{
-                    fontSize: "0.6rem",
-                    color: isSelected ? "#86efac" : "rgba(255,255,255,0.9)",
-                    textShadow: "0 1px 3px rgba(0,0,0,0.8)",
-                    maxWidth: "100%",
-                    overflow: "hidden",
+                    fontSize: "0.58rem",
+                    color: isSelected ? "#86efac" : "rgba(255,255,255,0.92)",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                    lineHeight: 1.1,
                     whiteSpace: "nowrap",
+                    overflow: "hidden",
                     textOverflow: "ellipsis",
                   }}
                 >
                   {pp.player.jerseyName}
                 </div>
-
-                {/* Rating bubble */}
                 {showRatings && rating != null && (
-                  <div
-                    className="rounded-full font-bold leading-none px-1"
-                    style={{
-                      fontSize: "0.55rem",
-                      color: ratingColor(rating),
-                      background: "rgba(0,0,0,0.55)",
-                      paddingTop: "1px",
-                      paddingBottom: "1px",
-                    }}
-                  >
+                  <div style={{
+                    fontSize: "0.52rem",
+                    color: ratingColor(rating),
+                    background: "rgba(0,0,0,0.6)",
+                    padding: "1px 3px",
+                    borderRadius: "4px",
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                  }}>
                     {rating.toFixed(1)}
                   </div>
                 )}
@@ -206,21 +195,19 @@ export function FootballPitch({
       {bench.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-2 px-1">Bench</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {bench.map((pp) => (
               <button
                 key={pp.matchPlayer.id}
                 onClick={() => onPlayerClick?.(pp.matchPlayer.id)}
                 disabled={!onPlayerClick}
                 className={cn(
-                  "flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all text-left",
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all text-left",
                   onPlayerClick ? "cursor-pointer hover:border-primary/50 hover:bg-primary/5 active:scale-95" : "cursor-default",
-                  "bg-card border-border"
+                  "bg-card/60 border-border/60"
                 )}
               >
-                <span className="text-xs font-bold text-muted-foreground w-5 text-center">
-                  {pp.player.jerseyNumber}
-                </span>
+                <span className="text-xs font-bold text-muted-foreground">{pp.player.jerseyNumber}</span>
                 <span className="text-xs font-medium">{pp.player.jerseyName}</span>
                 {pp.stats && showRatings && (
                   <span className="text-xs font-bold tabular-nums" style={{ color: ratingColor(pp.stats.rating) }}>

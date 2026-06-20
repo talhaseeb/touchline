@@ -219,6 +219,41 @@ export default function NewMatchPage() {
             </CardContent>
           </Card>
 
+          {/* Position assignments — only shown once at least 1 starter picked */}
+          {selectedStarters.length > 0 && (
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Match Positions
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">Adjust each player's position for this match only</p>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {selectedStarters.map((pid) => {
+                  const p = (players ?? []).find((pl) => pl.id === pid);
+                  if (!p) return null;
+                  return (
+                    <div key={pid} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-white">#{p.jerseyNumber}</span>
+                      </div>
+                      <span className="text-sm font-medium flex-1 truncate">{p.jerseyName}</span>
+                      <select
+                        value={starterPositions[pid] ?? p.primaryPosition}
+                        onChange={(e) => setStarterPositions((prev) => ({ ...prev, [pid]: e.target.value }))}
+                        className="text-sm font-semibold bg-background border border-border rounded-lg px-2 py-1 text-foreground outline-none focus:border-primary/60 transition-colors"
+                      >
+                        {["GK","RB","CB","LB","RWB","LWB","CDM","CM","CAM","RM","LM","RW","LW","SS","ST","CF"].map((pos) => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Bench */}
           <Card className="bg-card border-border">
             <CardHeader className="pb-3">
