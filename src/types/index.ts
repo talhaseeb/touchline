@@ -11,7 +11,7 @@ export interface Player {
   id: string;
   firstName: string;
   lastName: string;
-  jerseyName: string;       // name printed on the back of the shirt
+  jerseyName: string;
   jerseyNumber: number;
   primaryPosition: string;
   secondaryPosition?: string;
@@ -56,33 +56,25 @@ export type EventType =
   | "Lost Possession"
   | "Out Of Position"
   | "Missed Tackle"
-  | "Missed Chance";
+  | "Missed Chance"
+  | "Substitution";
 
 export interface MatchEvent {
   id: string;
   matchId: string;
-  playerId: string;
+  playerId: string;       // player going OFF (or acting player for non-sub events)
   timestamp: number;
   type: EventType;
+  relatedPlayerId?: string; // player coming ON (substitutions only)
   notes?: string;
 }
 
 export const POSITIVE_EVENTS: EventType[] = [
-  "Goal",
-  "Assist",
-  "Key Pass",
-  "Interception",
-  "Tackle Won",
-  "Recovery",
-  "Good Pass",
+  "Goal", "Assist", "Key Pass", "Interception", "Tackle Won", "Recovery", "Good Pass",
 ];
 
 export const NEGATIVE_EVENTS: EventType[] = [
-  "Bad Pass",
-  "Lost Possession",
-  "Out Of Position",
-  "Missed Tackle",
-  "Missed Chance",
+  "Bad Pass", "Lost Possession", "Out Of Position", "Missed Tackle", "Missed Chance",
 ];
 
 export const EVENT_WEIGHTS: Record<EventType, number> = {
@@ -98,29 +90,15 @@ export const EVENT_WEIGHTS: Record<EventType, number> = {
   "Missed Tackle": -1,
   "Out Of Position": -1,
   "Missed Chance": -1,
+  Substitution: 0,
 };
 
 export const FORMATIONS: Record<string, { positions: string[]; label: string }> = {
-  "4-4-2": {
-    label: "4-4-2",
-    positions: ["GK", "RB", "CB", "CB", "LB", "RM", "CM", "CM", "LM", "ST", "ST"],
-  },
-  "4-3-3": {
-    label: "4-3-3",
-    positions: ["GK", "RB", "CB", "CB", "LB", "CM", "CM", "CM", "RW", "ST", "LW"],
-  },
-  "4-2-3-1": {
-    label: "4-2-3-1",
-    positions: ["GK", "RB", "CB", "CB", "LB", "CDM", "CDM", "CAM", "CAM", "CAM", "ST"],
-  },
-  "3-5-2": {
-    label: "3-5-2",
-    positions: ["GK", "CB", "CB", "CB", "RM", "CM", "CM", "CM", "LM", "ST", "ST"],
-  },
-  "5-3-2": {
-    label: "5-3-2",
-    positions: ["GK", "RWB", "CB", "CB", "CB", "LWB", "CM", "CM", "CM", "ST", "ST"],
-  },
+  "4-4-2":   { label: "4-4-2",   positions: ["GK", "RB", "CB", "CB", "LB", "RM", "CM", "CM", "LM", "ST", "ST"] },
+  "4-3-3":   { label: "4-3-3",   positions: ["GK", "RB", "CB", "CB", "LB", "CM", "CM", "CM", "RW", "ST", "LW"] },
+  "4-2-3-1": { label: "4-2-3-1", positions: ["GK", "RB", "CB", "CB", "LB", "CDM", "CDM", "CAM", "CAM", "CAM", "ST"] },
+  "3-5-2":   { label: "3-5-2",   positions: ["GK", "CB", "CB", "CB", "RM", "CM", "CM", "CM", "LM", "ST", "ST"] },
+  "5-3-2":   { label: "5-3-2",   positions: ["GK", "RWB", "CB", "CB", "CB", "LWB", "CM", "CM", "CM", "ST", "ST"] },
 };
 
 export interface PlayerStats {
@@ -130,5 +108,5 @@ export interface PlayerStats {
   positiveEvents: number;
   negativeEvents: number;
   rating: number;
-  eventCounts: Record<EventType, number>;
+  eventCounts: Partial<Record<EventType, number>>;
 }

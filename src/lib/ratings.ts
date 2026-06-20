@@ -12,6 +12,7 @@ export function calculatePlayerStats(playerId: string, events: MatchEvent[]): Pl
   let negativeEvents = 0;
 
   for (const ev of playerEvents) {
+    if (ev.type === "Substitution") continue; // substitutions don't affect rating
     eventCounts[ev.type] = (eventCounts[ev.type] || 0) + 1;
     weightedSum += EVENT_WEIGHTS[ev.type];
     if (ev.type === "Goal") goals++;

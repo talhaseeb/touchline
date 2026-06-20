@@ -38,7 +38,7 @@ const SQUAD: Omit<Player, "id">[] = [
   { firstName: "Ayyan",         lastName: "Sana",      jerseyName: "SANA",       jerseyNumber: 10, primaryPosition: "CAM", secondaryPosition: "LW",     active: true },
   { firstName: "Saaim",         lastName: "Tariq",     jerseyName: "SAAIM T.",   jerseyNumber: 2,  primaryPosition: "LB",  secondaryPosition: undefined, active: true },
   { firstName: "Daanyaal",      lastName: "Raza",      jerseyName: "RAZA",       jerseyNumber: 3,  primaryPosition: "CB",  secondaryPosition: "CDM",    active: true },
-  { firstName: "Talha Haseeb",  lastName: "Mohammed",  jerseyName: "TALHA",      jerseyNumber: 99, primaryPosition: "CB",  secondaryPosition: "RB",     active: true },
+  { firstName: "Talha Haseeb",  lastName: "Mohammed",  jerseyName: "TALHA",      jerseyNumber: 99, primaryPosition: "CDM",  secondaryPosition: "LW",     active: true },
   { firstName: "Muhammad",      lastName: "Hamza",     jerseyName: "HAMZA",      jerseyNumber: 6,  primaryPosition: "CDM", secondaryPosition: "CM",     active: true },
   { firstName: "Humza",         lastName: "Khan",      jerseyName: "HUMZA K.",   jerseyNumber: 4,  primaryPosition: "CM",  secondaryPosition: "CDM",    active: true },
   { firstName: "Zaid",          lastName: "Syed",      jerseyName: "ZAID",       jerseyNumber: 77, primaryPosition: "RW",  secondaryPosition: "ST",     active: true },

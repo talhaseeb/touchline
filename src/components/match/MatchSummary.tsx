@@ -161,13 +161,30 @@ export function MatchSummary({ matchId }: { matchId: string }) {
                   {events.length === 0 && <p className="text-sm text-muted-foreground">No events recorded</p>}
                   {[...events].reverse().map((ev) => {
                     const player = playerMap[ev.playerId];
+                    const relatedPlayer = ev.relatedPlayerId ? playerMap[ev.relatedPlayerId] : null;
                     const isPos = POSITIVE_EVENTS.includes(ev.type);
+                    const isSub = ev.type === "Substitution";
                     return (
                       <div key={ev.id} className="flex items-start gap-3 text-sm">
                         <span className="font-mono text-xs text-muted-foreground w-12 shrink-0 mt-0.5">{formatTime(ev.timestamp)}</span>
                         <div>
-                          <span className={isPos ? "text-green-400 font-medium" : "text-red-400 font-medium"}>{ev.type}</span>
-                          <span className="text-muted-foreground"> – {player ? `${player.firstName} ${player.lastName}` : "Unknown"}</span>
+                          {isSub ? (
+                            <>
+                              <span className="text-blue-400 font-medium">↕ Substitution</span>
+                              <span className="text-muted-foreground">
+                                {" – "}
+                                <span className="text-rose-400">{player?.jerseyName ?? player?.firstName ?? "?"}</span>
+                                {" off · "}
+                                <span className="text-emerald-400">{relatedPlayer?.jerseyName ?? relatedPlayer?.firstName ?? "?"}</span>
+                                {" on"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={isPos ? "text-green-400 font-medium" : "text-red-400 font-medium"}>{ev.type}</span>
+                              <span className="text-muted-foreground"> – {player ? `${player.jerseyName || player.firstName + " " + player.lastName}` : "Unknown"}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
