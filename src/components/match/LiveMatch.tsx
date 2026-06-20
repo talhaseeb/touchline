@@ -155,7 +155,7 @@ export function LiveMatch({ matchId }: { matchId: string }) {
                   <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                     <span className="text-sm font-bold text-white">#{player.jerseyNumber}</span>
                   </div>
-                  <span className="text-xs font-semibold text-center leading-tight">{player.firstName} {player.lastName[0]}.</span>
+                  <span className="text-xs font-semibold text-center leading-tight">{player.jerseyName || `${player.firstName} ${player.lastName[0]}.`}</span>
                   <span className="text-xs text-muted-foreground">{mp.position}</span>
                   {stats && <RatingBadge rating={stats.rating} />}
                 </button>
@@ -177,7 +177,7 @@ export function LiveMatch({ matchId }: { matchId: string }) {
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted border border-border"
                 >
                   <span className="text-xs font-bold text-muted-foreground">#{player.jerseyNumber}</span>
-                  <span className="text-xs">{player.firstName} {player.lastName[0]}.</span>
+                  <span className="text-xs">{player.jerseyName || `${player.firstName} ${player.lastName[0]}.`}</span>
                   <Badge variant="outline" className="text-xs">{player.primaryPosition}</Badge>
                 </div>
               );
@@ -202,7 +202,7 @@ export function LiveMatch({ matchId }: { matchId: string }) {
                     </span>
                     <br />
                     <span className="text-muted-foreground">
-                      {player ? `${player.firstName} ${player.lastName[0]}.` : "Unknown"}
+                      {player ? (player.jerseyName || `${player.firstName} ${player.lastName[0]}.`) : "Unknown"}
                     </span>
                   </div>
                 );

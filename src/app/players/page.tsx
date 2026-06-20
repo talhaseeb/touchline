@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
 import { getSession } from "@/lib/auth";
@@ -27,6 +27,7 @@ function PlayerForm({ player, onSave, onClose }: {
   const [form, setForm] = useState({
     firstName: player?.firstName ?? "",
     lastName: player?.lastName ?? "",
+    jerseyName: player?.jerseyName ?? "",
     jerseyNumber: player?.jerseyNumber?.toString() ?? "",
     primaryPosition: player?.primaryPosition ?? "",
     secondaryPosition: player?.secondaryPosition ?? "",
@@ -42,11 +43,14 @@ function PlayerForm({ player, onSave, onClose }: {
       return;
     }
     onSave({
-      firstName: form.firstName,
-      lastName: form.lastName,
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      jerseyName: form.jerseyName.trim() || form.lastName.trim().toUpperCase(),
       jerseyNumber: Number(form.jerseyNumber),
       primaryPosition: form.primaryPosition,
-      secondaryPosition: form.secondaryPosition || undefined,
+      secondaryPosition: form.secondaryPosition && form.secondaryPosition !== "none"
+        ? form.secondaryPosition
+        : undefined,
       active: form.active,
     });
   };
@@ -63,9 +67,15 @@ function PlayerForm({ player, onSave, onClose }: {
           <Input value={form.lastName} onChange={(e) => handle("lastName", e.target.value)} placeholder="Last name" className="h-11" />
         </div>
       </div>
-      <div className="space-y-1.5">
-        <Label>Jersey Number *</Label>
-        <Input type="number" min={1} max={99} value={form.jerseyNumber} onChange={(e) => handle("jerseyNumber", e.target.value)} placeholder="e.g. 10" className="h-11" />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Jersey Name</Label>
+          <Input value={form.jerseyName} onChange={(e) => handle("jerseyName", e.target.value)} placeholder="Name on shirt" className="h-11" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Jersey Number *</Label>
+          <Input type="number" min={1} max={99} value={form.jerseyNumber} onChange={(e) => handle("jerseyNumber", e.target.value)} placeholder="e.g. 10" className="h-11" />
+        </div>
       </div>
       <div className="space-y-1.5">
         <Label>Primary Position *</Label>
@@ -78,7 +88,7 @@ function PlayerForm({ player, onSave, onClose }: {
       </div>
       <div className="space-y-1.5">
         <Label>Secondary Position</Label>
-        <Select value={form.secondaryPosition} onValueChange={(v: string | null) => handle("secondaryPosition", v ?? "")}>
+        <Select value={form.secondaryPosition || "none"} onValueChange={(v: string | null) => handle("secondaryPosition", v === "none" ? "" : (v ?? ""))}>
           <SelectTrigger className="h-11"><SelectValue placeholder="Optional" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
@@ -105,7 +115,9 @@ export default function PlayersPage() {
   const players = useLiveQuery(() => db.players.orderBy("jerseyNumber").toArray(), []);
 
   const filtered = (players ?? []).filter((p) =>
-    `${p.firstName} ${p.lastName} ${p.jerseyNumber} ${p.primaryPosition}`.toLowerCase().includes(search.toLowerCase())
+    `${p.firstName} ${p.lastName} ${p.jerseyName} ${p.jerseyNumber} ${p.primaryPosition}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
 
   const handleAdd = async (data: Omit<Player, "id">) => {
@@ -134,7 +146,7 @@ export default function PlayersPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Players</h1>
-            <p className="text-muted-foreground">{players?.length ?? 0} players registered</p>
+            <p className="text-muted-foreground">{players?.length ?? 0} players · JRJ Jets</p>
           </div>
           {canEdit && (
             <Button className="bg-primary hover:bg-primary/90" onClick={() => setAddOpen(true)}>
@@ -145,7 +157,7 @@ export default function PlayersPage() {
 
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9 h-11" placeholder="Search players…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9 h-11" placeholder="Search by name, number, or position…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
         {filtered.length === 0 ? (
@@ -162,19 +174,26 @@ export default function PlayersPage() {
           <div className="space-y-2">
             {filtered.map((p) => (
               <Card key={p.id} className="bg-card border-border hover:border-border/80 transition-colors">
-                <CardContent className="py-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <CardContent className="py-3 flex items-center gap-4">
+                  {/* Jersey number circle */}
+                  <div className="w-11 h-11 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                     <span className="text-sm font-bold text-primary">#{p.jerseyNumber}</span>
                   </div>
+
+                  {/* Name block */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold">{p.firstName} {p.lastName}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="text-xs">{p.primaryPosition}</Badge>
-                      {p.secondaryPosition && <Badge variant="outline" className="text-xs text-muted-foreground">{p.secondaryPosition}</Badge>}
+                    <p className="font-semibold leading-tight">{p.firstName} {p.lastName}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-muted-foreground font-mono">{p.jerseyName}</span>
+                      <Badge variant="outline" className="text-xs border-primary/40 text-primary">{p.primaryPosition}</Badge>
+                      {p.secondaryPosition && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">{p.secondaryPosition}</Badge>
+                      )}
                     </div>
                   </div>
+
                   {canEdit && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 shrink-0">
                       <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditPlayer(p)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -191,14 +210,14 @@ export default function PlayersPage() {
       </div>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Add Player</DialogTitle></DialogHeader>
           <PlayerForm onSave={handleAdd} onClose={() => setAddOpen(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editPlayer} onOpenChange={() => setEditPlayer(null)}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Player</DialogTitle></DialogHeader>
           {editPlayer && <PlayerForm player={editPlayer} onSave={handleEdit} onClose={() => setEditPlayer(null)} />}
         </DialogContent>

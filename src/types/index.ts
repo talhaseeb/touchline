@@ -11,6 +11,7 @@ export interface Player {
   id: string;
   firstName: string;
   lastName: string;
+  jerseyName: string;       // name printed on the back of the shirt
   jerseyNumber: number;
   primaryPosition: string;
   secondaryPosition?: string;
