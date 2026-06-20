@@ -22,7 +22,7 @@ const FORMATION_KEYS = Object.keys(FORMATIONS);
 export default function NewMatchPage() {
   const router = useRouter();
   const teams = useLiveQuery(() => db.teams.orderBy("name").toArray(), []);
-  const players = useLiveQuery(() => db.players.where("active").equals(1).sortBy("jerseyNumber"), []);
+  const players = useLiveQuery(() => db.players.orderBy("jerseyNumber").toArray(), []);
 
   const [opponentId, setOpponentId] = useState("");
   const [formation, setFormation] = useState("4-4-2");
