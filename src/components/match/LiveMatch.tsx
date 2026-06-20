@@ -8,6 +8,8 @@ import { calculatePlayerStats } from "@/lib/ratings";
 import { getSuggestedSubstitutes } from "@/lib/substitutions";
 import { getPositionGroup, GROUP_STYLES } from "@/lib/positions";
 import { PositionBadge } from "@/components/ui/PositionBadge";
+import { FootballPitch } from "@/components/pitch/FootballPitch";
+import type { PitchPlayer } from "@/components/pitch/FootballPitch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -15,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
-import { Pause, Play, Square, ArrowLeftRight, Circle, Clock, ChevronDown } from "lucide-react";
+import { Pause, Play, Square, ArrowLeftRight, Clock } from "lucide-react";
 import type { EventType } from "@/types";
 import { POSITIVE_EVENTS, NEGATIVE_EVENTS } from "@/types";
 import { cn } from "@/lib/utils";
@@ -97,12 +99,10 @@ export function LiveMatch({ matchId }: { matchId: string }) {
     await db.matchPlayers.update(selectedMp.id, { onField: false });
     await db.matchPlayers.update(subMp.id, { onField: true, position: selectedMp.position });
 
-    // Record proper substitution event with both players
     await db.events.add({
-      id: nanoid(),
-      matchId,
-      playerId: selectedMp.playerId,       // player going OFF
-      relatedPlayerId: subMp.playerId,     // player coming ON
+      id: nanoid(), matchId,
+      playerId: selectedMp.playerId,
+      relatedPlayerId: subMp.playerId,
       timestamp: timer.elapsed,
       type: "Substitution",
     });
@@ -122,16 +122,29 @@ export function LiveMatch({ matchId }: { matchId: string }) {
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+  // Build pitch data
+  const starterPitchPlayers: PitchPlayer[] = onField.map((mp) => ({
+    matchPlayer: mp,
+    player: playerMap[mp.playerId],
+    stats: events ? calculatePlayerStats(mp.playerId, events) : null,
+  })).filter((pp) => !!pp.player);
+
+  const benchPitchPlayers: PitchPlayer[] = bench.map((mp) => ({
+    matchPlayer: mp,
+    player: playerMap[mp.playerId],
+    stats: events ? calculatePlayerStats(mp.playerId, events) : null,
+  })).filter((pp) => !!pp.player);
+
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
 
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border shrink-0">
+      <div className="glass-header flex items-center gap-3 px-4 py-3 shrink-0">
         <div className="flex items-center gap-2 shrink-0">
-          <Circle className="w-2.5 h-2.5 fill-primary text-primary animate-pulse" />
+          <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
           <span className="text-xs font-bold text-primary uppercase tracking-wider">Live</span>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Clock className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-2xl font-mono font-bold tabular-nums">{timer.display}</span>
         </div>
@@ -151,80 +164,21 @@ export function LiveMatch({ matchId }: { matchId: string }) {
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Pitch area */}
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-
-          {/* On-field players */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-            {onField.map((mp) => {
-              const player = playerMap[mp.playerId];
-              if (!player) return null;
-              const stats = events ? calculatePlayerStats(mp.playerId, events) : null;
-              const group = getPositionGroup(mp.position);
-              const styles = GROUP_STYLES[group];
-              const isSelected = selectedMpId === mp.id;
-              return (
-                <button
-                  key={mp.id}
-                  onClick={() => { setSelectedMpId(mp.id); setSubMode(false); }}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all active:scale-95",
-                    isSelected
-                      ? "border-primary bg-primary/15 shadow-lg shadow-primary/20"
-                      : "border-border bg-card hover:border-primary/40"
-                  )}
-                >
-                  <div className={cn(
-                    "w-11 h-11 rounded-full flex items-center justify-center ring-2 transition-all",
-                    isSelected ? "bg-primary ring-primary/40" : `bg-card ${styles.ring}`
-                  )}>
-                    <span className={cn("text-sm font-bold", isSelected ? "text-white" : "text-foreground")}>
-                      {player.jerseyNumber}
-                    </span>
-                  </div>
-                  <span className="text-xs font-semibold text-center leading-tight w-full truncate">
-                    {player.jerseyName}
-                  </span>
-                  <span className={cn(
-                    "text-xs px-1.5 py-0.5 rounded-full border font-medium",
-                    isSelected ? "bg-primary/20 text-primary border-primary/40" : styles.badge
-                  )}>
-                    {mp.position}
-                  </span>
-                  {stats && <RatingDisplay rating={stats.rating} />}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Bench */}
-          {bench.length > 0 && (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider px-2">Bench</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {bench.map((mp) => {
-                  const player = playerMap[mp.playerId];
-                  if (!player) return null;
-                  return (
-                    <div key={mp.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50 border border-border">
-                      <span className="text-xs font-bold text-muted-foreground w-6 text-center">{player.jerseyNumber}</span>
-                      <span className="text-xs font-medium">{player.jerseyName}</span>
-                      <PositionBadge position={player.primaryPosition} />
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+        {/* Pitch column */}
+        <div className="flex-1 overflow-auto p-3">
+          <FootballPitch
+            formation={match?.formation ?? "4-4-2"}
+            starters={starterPitchPlayers}
+            bench={benchPitchPlayers}
+            onPlayerClick={(mpId) => { setSelectedMpId(mpId); setSubMode(false); }}
+            selectedMpId={selectedMpId}
+            showRatings
+          />
         </div>
 
-        {/* Timeline sidebar */}
-        <div className="hidden lg:flex flex-col w-60 border-l border-border bg-card shrink-0">
-          <div className="px-3 py-2 border-b border-border">
+        {/* Timeline sidebar — desktop only */}
+        <div className="hidden lg:flex flex-col w-60 border-l border-border/50 glass-sidebar shrink-0">
+          <div className="px-3 py-2.5 border-b border-border/50">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Timeline</p>
           </div>
           <ScrollArea className="flex-1">
@@ -246,7 +200,7 @@ export function LiveMatch({ matchId }: { matchId: string }) {
                         "font-semibold",
                         isSub ? "text-blue-400" : isPos ? "text-emerald-400" : "text-rose-400"
                       )}>
-                        {EVENT_ICONS[ev.type] ?? ""} {isSub ? "Substitution" : ev.type}
+                        {EVENT_ICONS[ev.type] ?? ""} {isSub ? "Sub" : ev.type}
                       </span>
                       <span className="font-mono text-muted-foreground">{fmt(ev.timestamp)}</span>
                     </div>
@@ -272,13 +226,13 @@ export function LiveMatch({ matchId }: { matchId: string }) {
 
       {/* Player event sheet */}
       <Sheet open={!!selectedMpId && !subMode} onOpenChange={(o) => { if (!o) setSelectedMpId(null); }}>
-        <SheetContent side="bottom" className="bg-card border-border rounded-t-2xl max-h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="glass-sheet rounded-t-2xl max-h-[85vh] overflow-y-auto">
           {selectedPlayer && selectedMp && (
             <>
               <SheetHeader className="mb-5">
                 <div className="flex items-center gap-4">
                   <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center ring-2 shrink-0",
-                    GROUP_STYLES[getPositionGroup(selectedMp.position)].ring, "bg-card"
+                    GROUP_STYLES[getPositionGroup(selectedMp.position)].ring, "bg-card/60"
                   )}>
                     <span className="text-lg font-bold">#{selectedPlayer.jerseyNumber}</span>
                   </div>
@@ -329,7 +283,7 @@ export function LiveMatch({ matchId }: { matchId: string }) {
 
       {/* Substitution sheet */}
       <Sheet open={!!selectedMpId && subMode} onOpenChange={(o) => { if (!o) { setSubMode(false); setSelectedMpId(null); } }}>
-        <SheetContent side="bottom" className="bg-card border-border rounded-t-2xl max-h-[75vh] overflow-y-auto">
+        <SheetContent side="bottom" className="glass-sheet rounded-t-2xl max-h-[75vh] overflow-y-auto">
           <SheetHeader className="mb-4">
             <SheetTitle>
               Substitute for {selectedPlayer?.jerseyName ?? selectedPlayer?.firstName}
@@ -346,7 +300,7 @@ export function LiveMatch({ matchId }: { matchId: string }) {
               <button
                 key={matchPlayer.id}
                 onClick={() => performSub(matchPlayer.id)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 bg-muted/30 transition-all text-left active:scale-[0.99]"
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-primary/5 bg-white/4 transition-all text-left active:scale-[0.99]"
               >
                 <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold">#{player.jerseyNumber}</span>

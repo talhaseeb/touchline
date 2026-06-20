@@ -249,21 +249,21 @@ export default function PlayersPage() {
       </div>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
+        <DialogContent className="glass-card border-0 max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader><DialogTitle>Add Player</DialogTitle></DialogHeader>
           <PlayerForm onSave={handleAdd} onClose={() => setAddOpen(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editPlayer} onOpenChange={() => setEditPlayer(null)}>
-        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
+        <DialogContent className="glass-card border-0 max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader><DialogTitle>Edit Player</DialogTitle></DialogHeader>
           {editPlayer && <PlayerForm player={editPlayer} onSave={handleEdit} onClose={() => setEditPlayer(null)} />}
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border">
+        <AlertDialogContent className="glass-card border-0 rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Player?</AlertDialogTitle>
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>

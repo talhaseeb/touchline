@@ -280,7 +280,7 @@ export default function NewMatchPage() {
       </div>
 
       {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-56 p-4 bg-background/90 backdrop-blur border-t border-border">
+      <div className="fixed bottom-0 left-0 right-0 md:left-56 p-4 glass-header border-t border-border/50">
         <Button
           className="w-full h-12 bg-primary hover:bg-primary/90 text-base font-bold shadow-lg shadow-primary/25"
           onClick={handleCreate}

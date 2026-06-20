@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar – desktop */}
-      <aside className="hidden md:flex flex-col w-56 border-r border-border bg-card shrink-0">
+      <aside className="hidden md:flex flex-col w-56 shrink-0 glass-sidebar">
         {/* Brand */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-border">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3 glass-header">
         <button onClick={() => setMobileOpen(true)} className="p-1">
           <Menu className="w-6 h-6" />
         </button>
@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <aside className="relative flex flex-col w-64 bg-card border-r border-border h-full">
+          <aside className="relative flex flex-col w-64 glass-sidebar h-full">
             <div className="flex items-center justify-between px-4 py-4 border-b border-border">
               <span className="font-bold">Touchline</span>
               <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5" /></button>
