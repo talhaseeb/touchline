@@ -5,25 +5,29 @@ import type { MatchPlayer, Player, PlayerStats } from "@/types";
 
 // ── Position → half-pitch coordinate ────────────────────────────────────────
 // y=0 top (attacking end), y=100 bottom (our goal)
-// fixedX means no horizontal distribution needed (flank positions)
+// fixedX means no horizontal distribution (flank positions with defined side)
 const POS_BASE: Record<string, { y: number; fixedX?: number }> = {
   GK:  { y: 88 },
-  RB:  { y: 72, fixedX: 84 }, LB: { y: 72, fixedX: 16 },
+  RB:  { y: 72, fixedX: 82 }, LB:  { y: 72, fixedX: 18 },
   CB:  { y: 70 },
-  RWB: { y: 62, fixedX: 89 }, LWB: { y: 62, fixedX: 11 },
+  RWB: { y: 62, fixedX: 84 }, LWB: { y: 62, fixedX: 16 },
   CDM: { y: 58 }, DM: { y: 58 },
   CM:  { y: 46 },
-  RM:  { y: 46, fixedX: 89 }, LM: { y: 46, fixedX: 11 },
+  RM:  { y: 46, fixedX: 84 }, LM:  { y: 46, fixedX: 16 },
   CAM: { y: 34 }, AM: { y: 34 },
-  RW:  { y: 20, fixedX: 84 }, LW: { y: 20, fixedX: 16 },
+  RW:  { y: 20, fixedX: 82 }, LW:  { y: 20, fixedX: 18 },
   SS:  { y: 22 },
   ST:  { y: 13 }, CF: { y: 13 },
 };
 
+// Distribute n players evenly in the CENTRAL band (30%–70%), widening for more players.
+// Keeps central roles away from the flank positions (RM/LM, RB/LB etc.)
 function distributeX(n: number, i: number): number {
   if (n === 1) return 50;
-  const margin = n <= 3 ? 22 : 16;
-  return margin + ((100 - 2 * margin) * i / (n - 1));
+  // bands: 2→[35,65], 3→[28,50,72], 4→[25,42,58,75], 5→[22,36,50,64,78]
+  const lo = Math.max(50 - n * 10, 22);
+  const hi = Math.min(50 + n * 10, 78);
+  return lo + ((hi - lo) * i / (n - 1));
 }
 
 function computeCoords(players: PitchPlayer[]): Map<string, [number, number]> {
@@ -139,7 +143,7 @@ export function FootballPitch({
                   left: `${px}%`,
                   top: `${py}%`,
                   transform: "translate(-50%, -50%)",
-                  width: "13%",
+                  width: "11%",
                   gap: "2px",
                 }}
               >
